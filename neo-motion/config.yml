@@ -1,0 +1,6 @@
+name: 'NEO Motion Sensor'
+packageKey: 'neo-motion-sensor'
+permissions:
+  matter: {}
+description: "Motion sensor driver for NEO NAS-PD07W10 (Matter 4991/1123) with 118-minute phantom motion filter (based on the SmartThings official Matter sensor driver)"
+vendorSupportInformation: "https://support.smartthings.com"

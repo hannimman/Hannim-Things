@@ -1,0 +1,18 @@
+# ponytail: official zigbee-motion-sensor driver, fingerprints trimmed to AY-204Z only
+# The device reports manufacturer with trailing spaces ("AOYAN "), so all variants are listed.
+zigbeeManufacturer:
+  - id: "AOYAN/AY-204Z"
+    deviceLabel: AOYAN Motion Sensor
+    manufacturer: "AOYAN"
+    model: AY-204Z
+    deviceProfileName: aoyan-motion
+  - id: "AOYAN_1/AY-204Z"
+    deviceLabel: AOYAN Motion Sensor
+    manufacturer: "AOYAN "
+    model: AY-204Z
+    deviceProfileName: aoyan-motion
+  - id: "AOYAN_2/AY-204Z"
+    deviceLabel: AOYAN Motion Sensor
+    manufacturer: "AOYAN  "
+    model: AY-204Z
+    deviceProfileName: aoyan-motion

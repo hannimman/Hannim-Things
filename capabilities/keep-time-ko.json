@@ -1,0 +1,28 @@
+{
+  "tag": "ko",
+  "label": "감지 유지시간",
+  "attributes": {
+    "keepTime": {
+      "label": "감지 유지시간",
+      "description": "움직임이 멈춘 뒤 '움직임 없음'으로 바뀌기까지의 시간",
+      "i18n": {
+        "value": {
+          "10": { "label": "10초" },
+          "30": { "label": "30초" },
+          "60": { "label": "60초" },
+          "120": { "label": "120초" }
+        }
+      }
+    }
+  },
+  "commands": {
+    "setKeepTime": {
+      "label": "감지 유지시간 설정",
+      "arguments": {
+        "value": {
+          "label": "감지 유지시간"
+        }
+      }
+    }
+  }
+}

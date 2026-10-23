@@ -1,0 +1,23 @@
+{
+  "name": "Motion Keep Time",
+  "attributes": {
+    "keepTime": {
+      "schema": {
+        "type": "object",
+        "properties": { "value": { "type": "string", "enum": ["10", "30", "60", "120"] } },
+        "additionalProperties": false,
+        "required": ["value"]
+      },
+      "setter": "setKeepTime",
+      "enumCommands": []
+    }
+  },
+  "commands": {
+    "setKeepTime": {
+      "name": "setKeepTime",
+      "arguments": [
+        { "name": "value", "optional": false, "schema": { "type": "string", "enum": ["10", "30", "60", "120"] } }
+      ]
+    }
+  }
+}

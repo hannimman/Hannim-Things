@@ -1,0 +1,6 @@
+name: 'AOYAN Motion Sensor'
+packageKey: 'aoyan-motion-sensor'
+permissions:
+  zigbee: {}
+description: "Motion sensor driver for AOYAN AY-204Z (based on the SmartThings official Zigbee motion sensor driver)"
+vendorSupportInformation: "https://support.smartthings.com"

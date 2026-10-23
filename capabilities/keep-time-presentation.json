@@ -1,0 +1,63 @@
+{
+  "dashboard": { "states": [], "actions": [] },
+  "detailView": [
+    {
+      "label": "감지 유지시간",
+      "displayType": "list",
+      "list": {
+        "command": {
+          "name": "setKeepTime",
+          "alternatives": [
+            { "key": "10", "value": "10초", "type": "active" },
+            { "key": "30", "value": "30초", "type": "active" },
+            { "key": "60", "value": "60초", "type": "active" },
+            { "key": "120", "value": "120초", "type": "active" }
+          ]
+        },
+        "state": {
+          "value": "keepTime.value",
+          "alternatives": [
+            { "key": "10", "value": "10초", "type": "active" },
+            { "key": "30", "value": "30초", "type": "active" },
+            { "key": "60", "value": "60초", "type": "active" },
+            { "key": "120", "value": "120초", "type": "active" }
+          ]
+        }
+      }
+    }
+  ],
+  "automation": {
+    "conditions": [
+      {
+        "label": "감지 유지시간",
+        "displayType": "list",
+        "list": {
+          "alternatives": [
+            { "key": "10", "value": "10초", "type": "active" },
+            { "key": "30", "value": "30초", "type": "active" },
+            { "key": "60", "value": "60초", "type": "active" },
+            { "key": "120", "value": "120초", "type": "active" }
+          ],
+          "value": "keepTime.value"
+        }
+      }
+    ],
+    "actions": [
+      {
+        "label": "감지 유지시간",
+        "displayType": "list",
+        "list": {
+          "alternatives": [
+            { "key": "10", "value": "10초", "type": "active" },
+            { "key": "30", "value": "30초", "type": "active" },
+            { "key": "60", "value": "60초", "type": "active" },
+            { "key": "120", "value": "120초", "type": "active" }
+          ],
+          "command": "setKeepTime"
+        }
+      }
+    ]
+  },
+  "id": "earthpepper23300.motionKeepTime",
+  "version": 1
+}

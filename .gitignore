@@ -1,0 +1,8 @@
+# Re-downloadable upstream sources
+st-official/
+lua_libs/
+# Build output
+*.zip
+# Local-only helper files
+invite.json
+neo_id.txt
