@@ -6,3 +6,5 @@ lua_libs/
 # Local-only helper files
 invite.json
 neo_id.txt
+tests/node_modules/
+tests/package-lock.json

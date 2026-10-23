@@ -62,3 +62,11 @@ cd st-official && git sparse-checkout set drivers/SmartThings/zigbee-motion-sens
 - 드라이버만 바꾸면 SmartThings 기본 `driverSwitched`는 설정(doConfigure)을 하지 않고, 프로필 기능이 드라이버 지원 목록에 없으면 NONFUNCTIONAL로 표시함 → 각 드라이버에 `driverSwitched` 처리 추가함.
 - 채널 초대 생성 시 `resource.root.service`는 `"developer"`여야 함 (`"core"`면 403).
 - 커스텀 기능 번역의 속성 값 라벨은 `i18n.value.<값>.label` 구조.
+
+## 테스트
+
+```sh
+cd tests && npm install && npm test   # "all tests passed"가 나오면 배포해도 됨
+```
+
+실제 허브 없이 SmartThings 모듈을 흉내 내서 AOYAN 설정 흐름과 NEO 오감지 필터를 검사하고, 드라이버 Lua 문법을 확인한다.
