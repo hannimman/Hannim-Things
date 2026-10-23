@@ -85,7 +85,8 @@ local function send_pending_dps(device)
     return
   end
   device:set_field(DP_ATTEMPTS, attempts)
-  for dp, value in pairs(pending) do
+  for key, value in pairs(pending) do
+    local dp = tonumber(key)
     device.log.info_with({ hub_logs = true }, string.format("AOYAN: sending dp %d = %d", dp, value))
     device:send(tuya_enum_command(device, dp, value))
   end
@@ -98,11 +99,12 @@ local function clear_acknowledged_dp(device, zb_rx)
     return
   end
   local dp = bytes:byte(3)
+  local key = tostring(dp)
   local pending = device:get_field(PENDING_DPS) or {}
-  if pending[dp] ~= nil then
+  if pending[key] ~= nil then
     local next_pending = {}
     for k, v in pairs(pending) do
-      if k ~= dp then next_pending[k] = v end
+      if k ~= key then next_pending[k] = v end
     end
     device:set_field(PENDING_DPS, next_pending, { persist = true })
     if next(next_pending) == nil then
@@ -149,10 +151,11 @@ local function on_message(driver, device, zb_rx)
 end
 
 -- Queue a Tuya setting until the device wakes up (see send_pending_dps).
+-- Keys are strings ("9"): the hub's persistent store rejects sparse integer-keyed tables.
 local function queue_dp(device, dp, value)
   local next_pending = {}
   for k, v in pairs(device:get_field(PENDING_DPS) or {}) do next_pending[k] = v end
-  next_pending[dp] = value
+  next_pending[tostring(dp)] = value
   device:set_field(PENDING_DPS, next_pending, { persist = true })
   device:set_field(LAST_DP_SEND, nil)
   device:set_field(DP_ATTEMPTS, nil)
@@ -166,8 +169,9 @@ local function set_sensitivity(driver, device, command)
   if value == nil then
     return
   end
-  queue_dp(device, SENSITIVITY_DP, value)
+  -- Update the UI first so the app spinner always resolves.
   device:emit_event(capabilities[SENSITIVITY_CAP_ID].sensitivityAdjustment[level]())
+  queue_dp(device, SENSITIVITY_DP, value)
 end
 
 -- App command: earthpepper23300.motionKeepTime.setKeepTime("10"|"30"|"60"|"120")
@@ -177,8 +181,8 @@ local function set_keep_time(driver, device, command)
   if value == nil then
     return
   end
-  queue_dp(device, KEEP_TIME_DP, value)
   device:emit_event(capabilities[KEEP_TIME_CAP_ID].keepTime(seconds))
+  queue_dp(device, KEEP_TIME_DP, value)
 end
 
 -- Give every UI attribute a value so the app stops showing
