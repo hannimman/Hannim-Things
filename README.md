@@ -1,43 +1,67 @@
-# Hannim Things — SmartThings Edge drivers
+# Hannim Things
 
-개인 SmartThings 허브용 Edge 드라이버 모음. 모두 SmartThings 공식 드라이버를 바탕으로 필요한 부분만 수정했다.
+우리집 SmartThings 허브용 커스텀 Edge 드라이버 모음입니다.
+모두 **SmartThings 공식 드라이버를 바탕으로**, 우리집 기기에서 문제가 되는 부분만 고쳤습니다.
 
-| 폴더 | 기기 | 수정 내용 |
+## 설치
+
+1. 아래 채널 초대 링크를 열고 삼성 계정으로 로그인합니다.
+   **https://bestow-regional.api.smartthings.com/invite/KajaPoqD3nl3**
+2. **Enroll**을 눌러 내 허브를 채널에 등록합니다.
+3. **Available Drivers**에서 필요한 드라이버를 **Install** 합니다.
+4. SmartThings 앱에서 기기 → ⋮ → **드라이버** → 설치한 드라이버로 변경합니다.
+
+> 개인이 만든 드라이버입니다. 내 기기와 모델이 정확히 같은지 확인하고 사용하세요.
+> 문제가 생기면 같은 메뉴에서 원래 드라이버로 되돌리면 됩니다.
+
+## 드라이버 목록
+
+| 드라이버 | 기기 | 연결 방식 | 바탕이 된 공식 드라이버 |
+|---|---|---|---|
+| [AOYAN Motion Sensor](#aoyan-motion-sensor) | AOYAN AY-204Z PIR 모션센서 | Zigbee | Zigbee Motion Sensor |
+| [NEO Motion Sensor](#neo-motion-sensor) | NEO NAS-PD07W10 PIR 모션센서 | Matter (Thread) | Matter Sensor |
+
+---
+
+### AOYAN Motion Sensor
+
+알리익스프레스 등에서 파는 Tuya 계열 Zigbee 3.0 PIR 모션센서입니다.
+SmartThings 기본 드라이버로는 "Zigbee Thing"으로만 잡히고 모션·배터리가 올라오지 않습니다.
+
+- 핑거프린트: 제조사 `AOYAN`(뒤에 공백이 붙는 경우 포함), 모델 `AY-204Z`
+
+| 기능 | 앱 표시 | 비고 |
 |---|---|---|
-| `aoyan-motion/` | AOYAN AY-204Z (Zigbee PIR) | 공식 `zigbee-motion-sensor` 기반. 잠든 기기 깨어날 때 재설정, 민감도·유지시간(Tuya DP 9/10), 탬퍼, 유지시간 연동 자동 해제 |
-| `neo-motion/` | NEO NAS-PD07W10 (Matter PIR) | 공식 `matter-sensor` 기반. 118분 주기 오감지 필터 (`src/phantom_filter.lua`) |
-| `capabilities/` | — | 커스텀 기능 `earthpepper23300.motionKeepTime` 정의·화면·한국어 번역 |
+| 모션 | 움직임 감지 / 없음 | 표준 IAS Zone |
+| 배터리 | % | 표준 Power Configuration |
+| 분해 감지 | 감지됨 / 정상 | 하드웨어에 탬퍼 스위치가 있을 때만 동작 |
+| 감지 민감도 | 높음 / 중간 / 낮음 | Tuya 전용 설정 (DP 9) |
+| 감지 유지시간 | 10 / 30 / 60 / 120초 | Tuya 전용 설정 (DP 10) |
 
-## 준비 (새 PC)
+고친 점:
+- **드라이버만 바꿔도 동작**: SmartThings는 드라이버를 바꿀 때 센서 설정을 보내지 않습니다. 이 드라이버는 센서가 깨어나는 순간을 잡아 설정을 다시 보내고, 30분 동안 짧은 요청으로 센서가 깨어나길 기다립니다. 재페어링 없이 동작합니다.
+- **설정은 센서가 깨어날 때 전달**: 배터리 센서라 평소에는 명령을 받지 못합니다. 앱에서 민감도·유지시간을 바꾼 뒤 **센서 앞에서 한 번 움직이면** 적용됩니다.
+- **자동 "움직임 없음"**: 센서가 해제 신호를 보내지 않는 경우를 대비해, 마지막 감지 후 유지시간(최소 20초)이 지나면 "움직임 없음"으로 바꿉니다.
 
-```sh
-npm i -g @smartthings/cli   # 2.x 이상 (1.x는 Node 25에서 Invalid URL 오류)
-smartthings edge:channels   # 처음 실행 시 브라우저 로그인
-```
+### NEO Motion Sensor
 
-## 배포
+NEO(Shenzhen NEO Electronic) Matter PIR 모션센서입니다. (Vendor `4991`, Product `1123`)
 
-```sh
-CHANNEL=5d6486f6-cb92-4d7b-b57b-3a2c9b56a41a   # Hannim Things 채널
-HUB=12e45a85-e130-4227-9b7f-8f942b8d5a96       # 스마트 홈 허브
-smartthings edge:drivers:package aoyan-motion --channel $CHANNEL --hub $HUB
-smartthings edge:drivers:package neo-motion   --channel $CHANNEL --hub $HUB
-```
+이 센서는 펌웨어 2.1.1에서 **이전 감지로부터 정확히 118분(±1초)마다 가짜 "감지"를 보내는 문제**가 있습니다.
+빈 방에서도 약 2시간마다 조명이 켜지는 원인이 됩니다. 2026-10 기준 제조사가 등록한 새 펌웨어는 없습니다.
 
-빌드만 하려면 `smartthings edge:drivers:package --build-only=out.zip <폴더>`.
+고친 점:
+- 이전 감지들로부터 **118분의 배수 ±3초**에 들어온 "감지"만 무시합니다. 나머지 감지와 "움직임 없음"은 그대로 전달됩니다.
+- 실제 기록 4일치로 시뮬레이션해 알려진 오감지를 모두 걸러냈고, 그 외에 걸러진 감지는 이미 사람이 있던 시간대였습니다.
+- 설치 직후에는 감지 기록이 없어서, 첫 감지 후 118분이 지나야 걸러내기 시작합니다.
 
-## 로그 (허브와 같은 네트워크에서만)
+---
 
-```sh
-smartthings edge:drivers:logcat <driverId> --hub-address 192.168.219.107
-```
+## 직접 수정하고 배포하기
 
-- AOYAN 드라이버 ID: `f0af2889-6577-4046-8e5e-711ef78bff7a`
-- NEO 드라이버 ID: `81b345cc-eb7b-4e79-a9eb-c4dbde7b689f`
+[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)를 참고하세요.
 
-## 공식 원본 / 라이브러리 다시 받기
+## 라이선스
 
-```sh
-git clone --depth 1 --filter=blob:none --sparse https://github.com/SmartThingsCommunity/SmartThingsEdgeDrivers.git st-official
-# lua_libs: https://github.com/SmartThingsCommunity/SmartThingsEdgeDrivers/releases (lua_libs-api_*.tar.gz)
-```
+[SmartThings Edge Drivers](https://github.com/SmartThingsCommunity/SmartThingsEdgeDrivers)(Apache License 2.0)를 바탕으로 합니다.
+각 파일의 원본 저작권 표시를 유지했습니다.
