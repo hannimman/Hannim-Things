@@ -15,10 +15,17 @@ package.preload["st.zigbee.constants"] = function() return { HUB = { ADDR = 0, E
 
 local m = require "aoyan_reconfigure"
 local fields, sent = {}, {}
+-- Like the hub datastore: a persisted table comes back as a proxy that next() sees as empty.
+local function proxy(t)
+  local values = {}
+  for k, v in pairs(t) do values[k] = v end
+  return setmetatable({}, { __index = values, __pairs = function() return pairs(values) end })
+end
+local function count(t) local n = 0 for _ in pairs(t) do n = n + 1 end return n end
 local log = { info_with = function() end, warn_with = function() end }
-local dev = { preferences = { sensitivity = "2", keepTime = "1" }, log = log,
+local dev = { preferences = { sensitivity = "2" }, log = log,
   get_model = function() return "AY-204Z" end, get_field = function(_, k) return fields[k] end,
-  set_field = function(_, k, v, p) if p and p.persist and type(v) == "table" then for key in pairs(v) do if type(key) ~= "string" then error("persist: non-string key " .. tostring(key)) end end end fields[k] = v end, send = function(_, msg) table.insert(sent, msg) end, emit_event = function(_, e) table.insert(emitted, e) end,
+  set_field = function(_, k, v, p) if p and p.persist and type(v) == "table" then for key in pairs(v) do if type(key) ~= "string" then error("persist: non-string key " .. tostring(key)) end end v = proxy(v) end fields[k] = v end, send = function(_, msg) table.insert(sent, msg) end, emit_event = function(_, e) table.insert(emitted, e) end,
   get_short_address = function() return 0x1234 end, get_endpoint = function() return 1 end }
 
 -- 1) user picks settings in the app -> queued + UI updated, nothing sent yet
@@ -50,7 +57,7 @@ assert(#sent == 2, "rate limited")
 drv.zigbee_message_dispatcher:dispatch(drv, dev, rx(0xEF00, 0x02, string.pack(">I2BBI2B", 1, 9, 4, 1, 2)))
 assert(fields.aoyan_pending_dps["9"] == nil and fields.aoyan_pending_dps["10"] == 1, "dp 9 acked")
 drv.zigbee_message_dispatcher:dispatch(drv, dev, rx(0xEF00, 0x02, string.pack(">I2BBI2B", 2, 10, 4, 1, 1)))
-assert(next(fields.aoyan_pending_dps) == nil and fields.aoyan_dp_attempts == nil, "all acked")
+assert(count(fields.aoyan_pending_dps) == 0 and fields.aoyan_dp_attempts == nil, "all acked")
 
 
 -- 6) not configured yet: probe response triggers configure, later battery marks done
@@ -59,4 +66,26 @@ drv.zigbee_message_dispatcher:dispatch(drv, dev, rx(0x0001, 0x01, ""))
 assert(dev.configured_calls == 1 and not fields.aoyan_configured, "first battery msg = awake -> configure")
 drv.zigbee_message_dispatcher:dispatch(drv, dev, rx(0x0001, 0x01, ""))
 assert(fields.aoyan_configured == true, "second battery msg = configured")
+-- 7) newly added device: defaults shown in the app AND queued for the device (Low, 10s)
+local function new_dev(states)
+  local f, ev = {}, {}
+  local d = { log = log, fields = f, emitted = ev,
+    get_model = function() return "AY-204Z" end, get_field = function(_, k) return f[k] end,
+    set_field = function(_, k, v) f[k] = v end, emit_event = function(_, e) table.insert(ev, e) end,
+    supports_capability_by_id = function() return true end,
+    get_latest_state = function(_, _, cap) return states[cap] end,
+    thread = { call_with_delay = function(_, _, fn) fn() end } }
+  return d
+end
+local fresh = new_dev({})
+m.added(nil, fresh)
+assert(fresh.fields.aoyan_pending_dps["9"] == 0 and fresh.fields.aoyan_pending_dps["10"] == 0, "defaults queued: Low, 10s")
+local shown = {}
+for _, e in ipairs(fresh.emitted) do shown[e.name] = e.v end
+assert(shown.sens == "Low" and shown.keep == "10", "defaults shown in app")
+
+-- 8) device that already has values keeps the user's choice
+local used = new_dev({ ["stse.sensitivityAdjustment"] = "High", ["earthpepper23300.motionKeepTime"] = "60", tamperAlert = "clear" })
+m.added(nil, used)
+assert(used.fields.aoyan_pending_dps == nil and #used.emitted == 0, "existing settings untouched")
 print("aoyan checks passed")

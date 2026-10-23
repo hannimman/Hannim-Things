@@ -44,7 +44,7 @@ local KEEP_TIME_VALUES = { ["10"] = 0, ["30"] = 1, ["60"] = 2, ["120"] = 3 }
 -- UI controls: SmartThings' own sensitivity capability + our keep time capability
 local SENSITIVITY_CAP_ID = "stse.sensitivityAdjustment"
 local KEEP_TIME_CAP_ID = "earthpepper23300.motionKeepTime"
-local DEFAULT_SENSITIVITY = "Medium"
+local DEFAULT_SENSITIVITY = "Low"
 local DEFAULT_KEEP_TIME = "10"
 
 local function is_aoyan(device)
@@ -65,9 +65,17 @@ local function tuya_enum_command(device, dp, value)
   return messages.ZigbeeMessageTx({ address_header = address, body = body })
 end
 
+-- Persisted tables come back as datastore proxies: next() sees them as empty, only pairs() works.
+local function is_empty(t)
+  for _ in pairs(t) do
+    return false
+  end
+  return true
+end
+
 local function send_pending_dps(device)
   local pending = device:get_field(PENDING_DPS) or {}
-  if next(pending) == nil then
+  if is_empty(pending) then
     return
   end
   local now = os.time()
@@ -107,7 +115,7 @@ local function clear_acknowledged_dp(device, zb_rx)
       if k ~= key then next_pending[k] = v end
     end
     device:set_field(PENDING_DPS, next_pending, { persist = true })
-    if next(next_pending) == nil then
+    if is_empty(next_pending) then
       device:set_field(DP_ATTEMPTS, nil)
     end
     device.log.info_with({ hub_logs = true }, string.format("AOYAN: dp %d acknowledged", dp))
@@ -187,13 +195,9 @@ end
 
 -- Give every UI attribute a value so the app stops showing
 -- "this device hasn't updated all of its status information yet".
--- The device never reports these settings, so the defaults are what it was last set to.
+-- The device never reports its settings, so a device new to this driver gets the defaults
+-- sent on its next wake; a device that already has values keeps what the user chose.
 local function fill_missing_states(device)
-  -- The auto-clear timer (motion_timeout) does not survive a driver restart,
-  -- so a leftover "active" would otherwise stay until the next motion.
-  if device:get_latest_state("main", capabilities.motionSensor.ID, "motion") == "active" then
-    device:emit_event(capabilities.motionSensor.motion.inactive())
-  end
   if device:supports_capability_by_id(capabilities.tamperAlert.ID)
       and device:get_latest_state("main", capabilities.tamperAlert.ID, "tamper") == nil then
     device:emit_event(capabilities.tamperAlert.tamper.clear())
@@ -201,10 +205,12 @@ local function fill_missing_states(device)
   if device:supports_capability_by_id(SENSITIVITY_CAP_ID)
       and device:get_latest_state("main", SENSITIVITY_CAP_ID, "sensitivityAdjustment") == nil then
     device:emit_event(capabilities[SENSITIVITY_CAP_ID].sensitivityAdjustment[DEFAULT_SENSITIVITY]())
+    queue_dp(device, SENSITIVITY_DP, SENSITIVITY_VALUES[DEFAULT_SENSITIVITY])
   end
   if device:supports_capability_by_id(KEEP_TIME_CAP_ID)
       and device:get_latest_state("main", KEEP_TIME_CAP_ID, "keepTime") == nil then
     device:emit_event(capabilities[KEEP_TIME_CAP_ID].keepTime(DEFAULT_KEEP_TIME))
+    queue_dp(device, KEEP_TIME_DP, KEEP_TIME_VALUES[DEFAULT_KEEP_TIME])
   end
 end
 
@@ -271,4 +277,11 @@ local function driver_switched(driver, device)
   device.thread:call_with_delay(PROFILE_SETTLE_SEC, function() fill_missing_states(device) end)
 end
 
-return { install = install, driver_switched = driver_switched, capability_handlers = capability_handlers }
+-- added: a freshly paired device starts with no settings shown or sent.
+local function added(driver, device)
+  if is_aoyan(device) then
+    device.thread:call_with_delay(PROFILE_SETTLE_SEC, function() fill_missing_states(device) end)
+  end
+end
+
+return { install = install, driver_switched = driver_switched, added = added, capability_handlers = capability_handlers }

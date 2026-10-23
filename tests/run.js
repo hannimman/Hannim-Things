@@ -8,6 +8,7 @@ const { lua, lauxlib, lualib, to_luastring } = require("fengari");
 const root = path.resolve(__dirname, "..");
 const tests = [
   ["aoyan-motion/src", "aoyan_reconfigure_test.lua"],
+  ["aoyan-motion/src", "aoyan_motion_test.lua"],
   ["neo-motion/src", "neo_phantom_filter_test.lua"],
 ];
 

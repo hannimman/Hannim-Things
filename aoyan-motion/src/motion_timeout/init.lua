@@ -8,8 +8,6 @@ local IASZone = zcl_clusters.IASZone
 
 
 
--- AOYAN keep time selected in the app, in seconds ("10"|"30"|"60"|"120")
-local KEEP_TIME_CAP_ID = "earthpepper23300.motionKeepTime"
 local TIMEOUT_TIMER = "motion_timeout_timer"
 
 local generate_event_from_zone_status = function(driver, device, zone_status, zigbee_message)
@@ -21,18 +19,18 @@ local generate_event_from_zone_status = function(driver, device, zone_status, zi
   end
   for _, fingerprint in ipairs(FINGERPRINTS) do
     if device:get_manufacturer() == fingerprint.mfr and device:get_model() == fingerprint.model then
-      -- Never clear before the device's own keep time; restart the timer on every report
-      -- so continuous motion is not cut off by an earlier timer.
-      local keep = tonumber(device:get_latest_state("main", KEEP_TIME_CAP_ID, "keepTime") or "") or 0
-      local timeout = math.max(fingerprint.timeout, keep)
-      local previous = device:get_field(TIMEOUT_TIMER)
-      if previous ~= nil then
-        device.thread:cancel_timer(previous)
+      -- No timeout: the device reports "clear" itself (AY-204Z).
+      if fingerprint.timeout ~= nil then
+        -- Restart the timer on every report so continuous motion is not cut off by an earlier timer.
+        local previous = device:get_field(TIMEOUT_TIMER)
+        if previous ~= nil then
+          device.thread:cancel_timer(previous)
+        end
+        device:set_field(TIMEOUT_TIMER, device.thread:call_with_delay(fingerprint.timeout, function(d)
+            device:set_field(TIMEOUT_TIMER, nil)
+            device:emit_event(capabilities.motionSensor.motion.inactive())
+          end))
       end
-      device:set_field(TIMEOUT_TIMER, device.thread:call_with_delay(timeout, function(d)
-          device:set_field(TIMEOUT_TIMER, nil)
-          device:emit_event(capabilities.motionSensor.motion.inactive())
-        end))
       break
     end
   end

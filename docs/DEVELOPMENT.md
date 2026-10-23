@@ -62,6 +62,7 @@ cd st-official && git sparse-checkout set drivers/SmartThings/zigbee-motion-sens
 - 드라이버만 바꾸면 SmartThings 기본 `driverSwitched`는 설정(doConfigure)을 하지 않고, 프로필 기능이 드라이버 지원 목록에 없으면 NONFUNCTIONAL로 표시함 → 각 드라이버에 `driverSwitched` 처리 추가함.
 - 채널 초대 생성 시 `resource.root.service`는 `"developer"`여야 함 (`"core"`면 403).
 - 커스텀 기능 번역의 속성 값 라벨은 `i18n.value.<값>.label` 구조.
+- AOYAN AY-204Z는 사람이 있는 동안 "감지" 상태를 유지하며 침묵하다가 스스로 해제(zone_status 0x0000)를 보낸다. 드라이버가 시간으로 "움직임 없음"을 만들면 사람이 앞에 있어도 다시 감지되지 않는다 → 자동 해제 타이머 없음. 해제까지의 시간은 센서의 감지 유지시간 설정(DP 10)이 정한다.
 
 ## 테스트
 
@@ -69,4 +70,4 @@ cd st-official && git sparse-checkout set drivers/SmartThings/zigbee-motion-sens
 cd tests && npm install && npm test   # "all tests passed"가 나오면 배포해도 됨
 ```
 
-실제 허브 없이 SmartThings 모듈을 흉내 내서 AOYAN 설정 흐름과 NEO 오감지 필터를 검사하고, 드라이버 Lua 문법을 확인한다.
+실제 허브 없이 SmartThings 모듈을 흉내 내서 AOYAN 설정 흐름·모션 처리와 NEO 오감지 필터를 검사하고, 드라이버 Lua 문법을 확인한다.

@@ -73,6 +73,7 @@ end
 local added_handler = function(self, device)
   device:send(zcl_clusters.TemperatureMeasurement.attributes.MinMeasuredValue:read(device))
   device:send(zcl_clusters.TemperatureMeasurement.attributes.MaxMeasuredValue:read(device))
+  aoyan_reconfigure.added(self, device)
 end
 
 local zigbee_motion_driver = {
