@@ -22,7 +22,8 @@ local function proxy(t)
   return setmetatable({}, { __index = values, __pairs = function() return pairs(values) end })
 end
 local function count(t) local n = 0 for _ in pairs(t) do n = n + 1 end return n end
-local log = { info_with = function() end, warn_with = function() end }
+local errors = {}
+local log = { info_with = function() end, warn_with = function() end, error_with = function(_, msg) table.insert(errors, msg) end }
 local dev = { preferences = { sensitivity = "2" }, log = log,
   get_model = function() return "AY-204Z" end, get_field = function(_, k) return fields[k] end,
   set_field = function(_, k, v, p) if p and p.persist and type(v) == "table" then for key in pairs(v) do if type(key) ~= "string" then error("persist: non-string key " .. tostring(key)) end end v = proxy(v) end fields[k] = v end, send = function(_, msg) table.insert(sent, msg) end, emit_event = function(_, e) table.insert(emitted, e) end,
@@ -79,6 +80,7 @@ local function new_dev(states)
 end
 local fresh = new_dev({})
 m.added(nil, fresh)
+assert(fresh.fields.aoyan_configured == true, "pairing already configured it: no second configure")
 assert(fresh.fields.aoyan_pending_dps["9"] == 0 and fresh.fields.aoyan_pending_dps["10"] == 0, "defaults queued: Low, 10s")
 local shown = {}
 for _, e in ipairs(fresh.emitted) do shown[e.name] = e.v end
@@ -88,4 +90,27 @@ assert(shown.sens == "Low" and shown.keep == "10", "defaults shown in app")
 local used = new_dev({ ["stse.sensitivityAdjustment"] = "High", ["earthpepper23300.motionKeepTime"] = "60", tamperAlert = "clear" })
 m.added(nil, used)
 assert(used.fields.aoyan_pending_dps == nil and #used.emitted == 0, "existing settings untouched")
+
+-- 9) a failing hook must not swallow the message (motion still dispatched)
+local dispatched = 0
+local drv2 = { zigbee_message_dispatcher = { dispatch = function() dispatched = dispatched + 1 end }, call_with_delay = function() end }
+m.install(drv2)
+local broken = { log = log, get_model = function() error("boom") end }
+drv2.zigbee_message_dispatcher:dispatch(drv2, broken, rx(0x0500, 0x00, ""))
+assert(dispatched == 1 and #errors == 1, "hook error logged, message still dispatched")
+
+-- 10) probe stops once the device answered (configuration sent), not 30 min later
+local tick, cancelled, reads = nil, false, 0
+local probed = new_dev({ tamperAlert = "clear", ["stse.sensitivityAdjustment"] = "Low", ["earthpepper23300.motionKeepTime"] = "10" })
+probed.send = function() reads = reads + 1 end
+probed.supports_capability_by_id = function() return false end
+probed.try_update_metadata = function() end
+probed.thread.call_on_schedule = function(_, _, fn) tick = fn return "timer" end
+probed.thread.cancel_timer = function() cancelled = true end
+m.driver_switched(nil, probed)
+tick()
+assert(reads == 1 and not cancelled, "probe reads while device silent")
+probed.fields.aoyan_last_configure_attempt = os.time() -- device answered -> configure sent
+tick()
+assert(reads == 1 and cancelled, "probe stops right after configure")
 print("aoyan checks passed")

@@ -230,7 +230,10 @@ local function start_probe(device)
   local started = os.time()
   local timer
   timer = device.thread:call_on_schedule(PROBE_INTERVAL_SEC, function()
-    if device:get_field(CONFIGURED) or os.time() - started > PROBE_DURATION_SEC then
+    -- Stop as soon as the device has answered once (configuration sent): every read is
+    -- queued at the device's parent router, so keep the load on it short.
+    if device:get_field(CONFIGURED) or device:get_field(LAST_ATTEMPT) ~= nil
+        or os.time() - started > PROBE_DURATION_SEC then
       device.thread:cancel_timer(timer)
       return
     end
@@ -244,7 +247,11 @@ local function install(driver)
   local dispatcher = driver.zigbee_message_dispatcher
   local original_dispatch = dispatcher.dispatch
   dispatcher.dispatch = function(self, drv, device, zb_rx, ...)
-    on_message(drv, device, zb_rx)
+    -- Our hook must never cost a motion report: on failure, log and dispatch anyway.
+    local ok, err = pcall(on_message, drv, device, zb_rx)
+    if not ok then
+      device.log.error_with({ hub_logs = true }, "AOYAN: wake-up hook failed: " .. tostring(err))
+    end
     return original_dispatch(self, drv, device, zb_rx, ...)
   end
 
@@ -278,8 +285,11 @@ local function driver_switched(driver, device)
 end
 
 -- added: a freshly paired device starts with no settings shown or sent.
+-- Pairing runs SmartThings' own doConfigure while the device is awake, so the wake-up
+-- hook does not need to configure it again.
 local function added(driver, device)
   if is_aoyan(device) then
+    device:set_field(CONFIGURED, true, { persist = true })
     device.thread:call_with_delay(PROFILE_SETTLE_SEC, function() fill_missing_states(device) end)
   end
 end

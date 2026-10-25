@@ -62,6 +62,8 @@ cd st-official && git sparse-checkout set drivers/SmartThings/zigbee-motion-sens
 - 드라이버만 바꾸면 SmartThings 기본 `driverSwitched`는 설정(doConfigure)을 하지 않고, 프로필 기능이 드라이버 지원 목록에 없으면 NONFUNCTIONAL로 표시함 → 각 드라이버에 `driverSwitched` 처리 추가함.
 - 채널 초대 생성 시 `resource.root.service`는 `"developer"`여야 함 (`"core"`면 403).
 - 커스텀 기능 번역의 속성 값 라벨은 `i18n.value.<값>.label` 구조.
+- AOYAN 깨우기 요청(5초 간격 배터리 읽기)은 센서가 한 번 응답하면 바로 멈춘다. 잠든 센서 앞으로 보낸 메시지는 중간 연결 기기(전구 등)에 쌓이므로 오래 보내지 않는다.
+- 모든 Zigbee 메시지가 거치는 AOYAN 훅은 pcall로 감싸, 훅이 실패해도 모션 신호는 항상 전달된다.
 - AOYAN AY-204Z는 사람이 있는 동안 "감지" 상태를 유지하며 침묵하다가 스스로 해제(zone_status 0x0000)를 보낸다. 드라이버가 시간으로 "움직임 없음"을 만들면 사람이 앞에 있어도 다시 감지되지 않는다 → 자동 해제 타이머 없음. 해제까지의 시간은 센서의 감지 유지시간 설정(DP 10)이 정한다.
 
 ## 테스트
