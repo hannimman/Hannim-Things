@@ -15,8 +15,12 @@ local t = s.chain
 ph, s = f.check(s, t + 600)
 assert(not ph and s.chain == t, "real motion 10 min later passes, chain kept")
 ph, s = f.check(s, t + P + 1)
-assert(ph and s.chain == t + P + 1, "tick despite real motion in between")
-ph = f.check(s, s.chain + 2 * P)
+assert(ph and s.chain == t + P + 1, "tick after 100+ idle minutes, real motion in between: dropped")
+-- people around (active within 10 min): tick passes, clock still followed
+ph, s = f.check({ chain = t, last_active = t + P - 300 }, t + P)
+assert(not ph and s.chain == t + P, "tick 5 min after real motion: passes")
+assert(f.check({ chain = t, last_active = t + P - 601 }, t + P), "tick after 10+ idle minutes: dropped")
+ph = f.check({ chain = t, last_active = t }, t + 2 * P)
 assert(ph, "missing tick (2P)")
 assert(not f.check({ chain = 1000, last_active = 50000 }, 1000 + 13 * P), "beyond 12 ticks")
 
