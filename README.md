@@ -20,6 +20,7 @@
 |---|---|---|---|
 | [AOYAN Motion Sensor](#aoyan-motion-sensor) | AOYAN AY-204Z PIR 모션센서 | Zigbee | Zigbee Motion Sensor |
 | [NEO Motion Sensor](#neo-motion-sensor) | NEO NAS-PD07W10 PIR 모션센서 | Matter (Thread) | Matter Sensor |
+| [Zigbee Motion Sensor Mc (AOYAN)](#zigbee-motion-sensor-mc-aoyan) | AOYAN AY-204Z PIR 모션센서 | Zigbee | Mariano의 Zigbee Motion Sensor Mc |
 
 ---
 
@@ -57,6 +58,15 @@ NEO(Shenzhen NEO Electronic) Matter PIR 모션센서입니다. (Vendor `4991`, P
 - 실제 기록 4일치로 시뮬레이션해 알려진 오감지를 모두 걸러냈고, 그 외에 걸러진 감지는 이미 사람이 있던 시간대였습니다.
 - 설치 직후에는 감지 기록이 없어서, 첫 감지 후 118분이 지나야 걸러내기 시작합니다.
 
+### Zigbee Motion Sensor Mc (AOYAN)
+
+[Mariano Colmenarejo](https://github.com/Mariano-Github/Edge-Drivers-Beta)의 커뮤니티 드라이버 `zigbee-motion-sensor-v4`에 AOYAN AY-204Z 핑거프린트만 추가한 버전입니다.
+위의 AOYAN Motion Sensor와 비교 테스트하려고 만들었습니다.
+
+- 핑거프린트: 제조사 `AOYAN`(뒤에 공백이 붙는 경우 포함), 모델 `AY-204Z` → 프로필 `motion-battery`
+- 모션·배터리는 표준 방식(IAS Zone, Power Configuration)으로 받습니다.
+- 감지 민감도·유지시간·분해 감지 설정은 없습니다. 신호 세기 표시와 배터리 정보 설정은 Mariano 드라이버 기능 그대로입니다.
+
 ---
 
 ## 직접 수정하고 배포하기
@@ -67,3 +77,4 @@ NEO(Shenzhen NEO Electronic) Matter PIR 모션센서입니다. (Vendor `4991`, P
 
 [SmartThings Edge Drivers](https://github.com/SmartThingsCommunity/SmartThingsEdgeDrivers)(Apache License 2.0)를 바탕으로 합니다.
 각 파일의 원본 저작권 표시를 유지했습니다.
+`aoyan-mariano/`는 [Mariano-Github/Edge-Drivers-Beta](https://github.com/Mariano-Github/Edge-Drivers-Beta)(Apache License 2.0)의 `zigbee-motion-sensor-v4`를 바탕으로 합니다.
