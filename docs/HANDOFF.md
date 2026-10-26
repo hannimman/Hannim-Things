@@ -26,12 +26,23 @@
 4. 며칠 지켜본다.
    - 이 드라이버에서도 죽으면 → 드라이버 문제가 아니라 네트워크 문제. 보안 모드 끄기를 검토.
    - 안 죽으면 → `aoyan-motion`과 차이를 비교.
-5. 가능하면 `smartthings edge:drivers:logcat`을 켜 두고 Tuya 시간 동기화 요청(EF00 클러스터 명령 0x24)이 오는지 본다. 오면 응답 구현을 검토.
+5. 가능하면 `smartthings edge:drivers:logcat`을 켜 두고 Tuya 시간 동기화 요청(EF00 클러스터 명령 0x24)이 오는지 본다. Zigbee2MQTT도 이 센서에 기본으로 응답하지 않으므로(`time_start` 기본값 off) 급하지 않음.
+
+## Zigbee2MQTT 정의와 비교 (`zigbee-herdsman-converters` src/devices/tuya.ts, AY-204Z)
+
+| 기능 | Zigbee2MQTT | aoyan-motion | aoyan-mariano |
+|---|---|---|---|
+| 모션 | IAS Zone alarm_1 | O | O |
+| 분해 감지 | IAS Zone tamper | O | X |
+| 배터리 % | Power Configuration | O | O |
+| 배터리 부족 | IAS Zone battery_low | X | X |
+| 감지 민감도 | DP 9 enum 0/1/2 | O | X |
+| 감지 유지시간 | DP 10 enum 0~3 (10/30/60/120초) | O | X |
+| 조도 | 없음 | - | - |
 
 ## 확인 안 된 것
 
 - Mariano 드라이버가 실제 AY-204Z에서 모션·배터리를 잘 받는지 (빌드·설치만 확인).
-- Zigbee2MQTT 자료상 AY-204Z에 **조도 센서**가 있다고 함. 두 드라이버 모두 지원 안 함.
 - 와이파이 2.4GHz 채널 간섭 여부 (Zigbee 14번 채널은 와이파이 1~4번과 겹침).
 
 ## Claude Code로 이어서 하기
