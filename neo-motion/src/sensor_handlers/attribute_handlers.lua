@@ -184,16 +184,19 @@ end
 
 -- [[ OCCUPANCY SENSING CLUSTER ATTRIBUTES ]] --
 
-local ACTIVE_HISTORY = "neo_active_history"
+local LAST_ACTIVE = "neo_last_active"
+local PHANTOM_CHAIN = "neo_phantom_chain"
+local OLD_HISTORY = "neo_active_history" -- replaced by the two scalars above
 
 function AttributeHandlers.occupancy_measured_value_handler(driver, device, ib, response)
   -- NEO firmware bug: drop the 118-minute phantom "active" reports (see phantom_filter.lua).
   -- "inactive" always passes through so a real session can still end normally.
   if ib.data.value == 0x01 then
-    local now = os.time()
-    local history = device:get_field(ACTIVE_HISTORY) or {}
-    local is_phantom = phantom_filter.is_phantom(history, now)
-    device:set_field(ACTIVE_HISTORY, phantom_filter.record(history, now), { persist = true })
+    local is_phantom, state = phantom_filter.check(
+      { last_active = device:get_field(LAST_ACTIVE), chain = device:get_field(PHANTOM_CHAIN) }, os.time())
+    device:set_field(LAST_ACTIVE, state.last_active, { persist = true })
+    device:set_field(PHANTOM_CHAIN, state.chain, { persist = true })
+    device:set_field(OLD_HISTORY, nil, { persist = true })
     if is_phantom then
       device.log.info_with({ hub_logs = true }, "NEO: phantom 118-minute motion report ignored")
       return
