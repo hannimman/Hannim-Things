@@ -13,6 +13,8 @@
 | 허브에 설치된 AOYAN용 드라이버 | `aoyan-motion`(사용 중), `aoyan-mariano`(비교용, 설치만 됨) |
 | SONOFF ZBMINIL2 (현관불) | 공식 Zigbee Switch 드라이버. 센서등에 전원을 주는 용도라 항상 켜 둠 → "전체 끄기" 자동화에서 빼야 함. 중성선 없는 기기라 Zigbee 중계 안 함 |
 
+관찰 기록은 [MONITORING.md](MONITORING.md)에 있습니다.
+
 ### 확인 방법 메모
 
 - 걸러진 NEO 가짜 감지는 기록에 남지 않습니다(허브 로그에만). **기록이 조용하면 필터가 걸렀거나 원래 안 온 것**이고, 둘을 구분하려면 `smartthings edge:drivers:logcat`을 켜야 합니다.
