@@ -187,27 +187,45 @@ end
 local LAST_ACTIVE = "neo_last_active"
 local PHANTOM_CHAIN = "neo_phantom_chain"
 local OLD_HISTORY = "neo_active_history" -- replaced by the two scalars above
+local DROPPED_AT = "neo_dropped_at"
+-- A phantom "active" is always cleared by the sensor 29-30s later. If it is still not cleared
+-- after this, someone walked in during the hold (the sensor sends no new "active" then).
+-- A week of history: 129 holds of 29-30s, none of 31-32s.
+local HELD_CHECK_SEC = 32
+
+local function emit_occupancy(device, endpoint_id, occupied)
+  if device:supports_capability(capabilities.motionSensor) then
+    device:emit_event_for_endpoint(endpoint_id, occupied and capabilities.motionSensor.motion.active() or capabilities.motionSensor.motion.inactive())
+  else
+    device:emit_event_for_endpoint(endpoint_id, occupied and capabilities.presenceSensor.presence("present") or capabilities.presenceSensor.presence("not present"))
+  end
+end
 
 function AttributeHandlers.occupancy_measured_value_handler(driver, device, ib, response)
   -- NEO firmware bug: drop the 118-minute phantom "active" reports (see phantom_filter.lua).
   -- "inactive" always passes through so a real session can still end normally.
   if ib.data.value == 0x01 then
+    local now = os.time()
     local is_phantom, state = phantom_filter.check(
-      { last_active = device:get_field(LAST_ACTIVE), chain = device:get_field(PHANTOM_CHAIN) }, os.time())
+      { last_active = device:get_field(LAST_ACTIVE), chain = device:get_field(PHANTOM_CHAIN) }, now)
     device:set_field(LAST_ACTIVE, state.last_active, { persist = true })
     device:set_field(PHANTOM_CHAIN, state.chain, { persist = true })
     device:set_field(OLD_HISTORY, nil, { persist = true })
     if is_phantom then
       device.log.info_with({ hub_logs = true }, "NEO: phantom 118-minute motion report ignored")
+      device:set_field(DROPPED_AT, now)
+      device.thread:call_with_delay(HELD_CHECK_SEC, function()
+        if device:get_field(DROPPED_AT) ~= now then return end
+        device:set_field(DROPPED_AT, nil)
+        device.log.info_with({ hub_logs = true }, "NEO: still occupied after an ignored report, reporting motion")
+        emit_occupancy(device, ib.endpoint_id, true)
+      end)
       return
     end
   end
 
-  if device:supports_capability(capabilities.motionSensor) then
-    device:emit_event_for_endpoint(ib.endpoint_id, ib.data.value == 0x01 and capabilities.motionSensor.motion.active() or capabilities.motionSensor.motion.inactive())
-  else
-    device:emit_event_for_endpoint(ib.endpoint_id, ib.data.value == 0x01 and capabilities.presenceSensor.presence("present") or capabilities.presenceSensor.presence("not present"))
-  end
+  device:set_field(DROPPED_AT, nil)
+  emit_occupancy(device, ib.endpoint_id, ib.data.value == 0x01)
 end
 
 

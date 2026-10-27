@@ -5,9 +5,12 @@ local P = 7080
 -- chain start: exactly +P after the previous active (room idle)
 local ph, s = f.check({ last_active = 1000 }, 1000 + P)
 assert(ph and s.chain == 1000 + P, "chain start +P")
-assert(f.check({ last_active = 1000 }, 1000 + P + 3), "+P+3")
-assert(f.check({ last_active = 1000 }, 1000 + P - 3), "+P-3")
-assert(not f.check({ last_active = 1000 }, 1000 + P + 4), "+P+4 outside")
+assert(f.check({ last_active = 1000 }, 1000 + P + 1), "+P+1")
+assert(f.check({ last_active = 1000 }, 1000 + P - 1), "+P-1")
+assert(not f.check({ last_active = 1000 }, 1000 + P + 2), "+P+2 outside")
+assert(not f.check({ last_active = 1000 }, 1000 + P - 2), "+P-2 outside")
+assert(f.check({ chain = 1000, last_active = 1000 }, 1000 + 2 * P + 2), "2P+2 (slow clock, missing tick)")
+assert(not f.check({ chain = 1000, last_active = 1000 }, 1000 + 2 * P + 3), "2P+3 outside")
 assert(not f.check({}, 5000), "empty state")
 
 -- chain keeps ticking even with real motion in between; real motion passes

@@ -5,30 +5,38 @@
 -- even while real motion happens in between; real motion does not reset it.
 --
 -- So only one clock is tracked:
---   * chain start: an "active" exactly 7080s (+-TOLERANCE) after the previous "active"
---   * chain tick: an "active" on k * 7080s (+-TOLERANCE, k <= 12) after the last phantom
+--   * chain start: an "active" exactly 7080s (-1..+1s) after the previous "active"
+--   * chain tick: an "active" on k * 7080s (-1..+min(k,2)s, k <= 12) after the last phantom
 -- A tick is never dropped while people are around (an "active" within the last BUSY_SEC):
 -- a stray light-on then is harmless, a missed real entry is not. The clock is still followed.
 -- Checked against a week of history: 23 of 25 chain phantoms dropped (the other 2 came while
 -- people were moving), and 7 real reports that the earlier all-history filter dropped now pass.
 
 local PERIOD_SEC = 7080
-local TOLERANCE_SEC = 3
+-- Measured over a week: ticks land 0..+1s after k*7080 for k=1, 0..+2s for k=2,3 (the clock
+-- runs slow). -1 covers whole-second rounding. A narrow window keeps real entries out of it.
+local EARLY_SEC = 1
+local MAX_LATE_SEC = 2
 local MAX_MULTIPLE = 12 -- missing ticks happen; ~24h back
 local BUSY_SEC = 600
 
 local M = {}
 
+local function near(elapsed, k)
+  local offset = elapsed - k * PERIOD_SEC
+  return offset >= -EARLY_SEC and offset <= math.min(k, MAX_LATE_SEC)
+end
+
 local function on_tick(elapsed)
   local k = math.floor(elapsed / PERIOD_SEC + 0.5)
-  return k >= 1 and k <= MAX_MULTIPLE and math.abs(elapsed - k * PERIOD_SEC) <= TOLERANCE_SEC
+  return k >= 1 and k <= MAX_MULTIPLE and near(elapsed, k)
 end
 
 -- state: { last_active = epoch seconds or nil, chain = epoch of last phantom or nil }
 -- Returns drop (true = ignore this report) and the next state (input is not modified).
 function M.check(state, now)
   local is_tick = (state.chain ~= nil and on_tick(now - state.chain))
-    or (state.last_active ~= nil and math.abs(now - state.last_active - PERIOD_SEC) <= TOLERANCE_SEC)
+    or (state.last_active ~= nil and near(now - state.last_active, 1))
   local busy = state.last_active ~= nil and now - state.last_active <= BUSY_SEC
   return is_tick and not busy, { last_active = now, chain = is_tick and now or state.chain }
 end

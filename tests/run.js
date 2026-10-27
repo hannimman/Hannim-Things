@@ -10,6 +10,7 @@ const tests = [
   ["aoyan-motion/src", "aoyan_reconfigure_test.lua"],
   ["aoyan-motion/src", "aoyan_motion_test.lua"],
   ["neo-motion/src", "neo_phantom_filter_test.lua"],
+  ["neo-motion/src", "neo_held_phantom_test.lua"],
 ];
 
 let failed = false;
